@@ -1,0 +1,23 @@
+{
+  "model_type": "logistic",
+  "accuracy": 0.9406,
+  "roc_auc": 0.9929,
+  "cv_auc": 0.9948,
+  "feature_names": [
+    "skill_overlap",
+    "sector_match",
+    "location_score",
+    "social_weight",
+    "prev_internship",
+    "edu_level"
+  ],
+  "coef_dict": {
+    "skill_overlap": 3.0163,
+    "sector_match": 2.4147,
+    "location_score": 0.7926,
+    "social_weight": 0.6702,
+    "prev_internship": 0.9713,
+    "edu_level": 0.6084
+  },
+  "trained_on": 1280
+}

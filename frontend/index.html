@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>InternIQ — AI Internship Allocation Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+<style>
+/* ─── Design tokens ─────────────────────────────────────────────────────── */
+:root {
+  --ink:       #0a0a0f;
+  --paper:     #f4f1eb;
+  --accent:    #e8521a;
+  --accent2:   #f0a500;
+  --muted:     #7a7672;
+  --card-bg:   #ffffff;
+  --border:    #ddd9d0;
+  --success:   #2d7a4f;
+  --tag-bg:    #f0ede6;
+  --grid:      rgba(10,10,15,0.04);
+
+  --ff-head: 'Syne', sans-serif;
+  --ff-body: 'Instrument Sans', sans-serif;
+  --ff-mono: 'DM Mono', monospace;
+
+  --r:   12px;
+  --r-lg:20px;
+  --sh:  0 2px 20px rgba(10,10,15,.08);
+  --sh-hover: 0 8px 40px rgba(10,10,15,.15);
+  --tr: .25s cubic-bezier(.4,0,.2,1);
+}
+
+/* ─── Reset & base ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--ff-body);
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Subtle grid background */
+body::before {
+  content:'';
+  position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* ─── Header ────────────────────────────────────────────────────────────── */
+header {
+  position: relative; z-index:10;
+  padding: 28px 40px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: rgba(244,241,235,.92);
+  backdrop-filter: blur(12px);
+  position: sticky; top: 0;
+}
+.logo {
+  font-family: var(--ff-head);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100%{transform:scale(1);opacity:1}
+  50%{transform:scale(1.4);opacity:.6}
+}
+.header-badge {
+  font-family: var(--ff-mono);
+  font-size: .7rem; font-weight: 500; letter-spacing:.08em;
+  background: var(--ink); color: var(--paper);
+  padding: 5px 12px; border-radius: 999px;
+  text-transform: uppercase;
+}
+
+/* ─── Hero ──────────────────────────────────────────────────────────────── */
+.hero {
+  position: relative; z-index: 1;
+  padding: 80px 40px 60px;
+  max-width: 960px; margin: 0 auto;
+}
+.hero-eyebrow {
+  font-family: var(--ff-mono);
+  font-size: .75rem; letter-spacing: .15em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.hero-eyebrow::before {
+  content:''; display:block; width:24px; height:2px; background:var(--accent);
+}
+h1 {
+  font-family: var(--ff-head);
+  font-size: clamp(2.4rem, 5vw, 4.2rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -.03em;
+  margin-bottom: 20px;
+}
+h1 em { font-style: italic; color: var(--accent); }
+.hero-sub {
+  font-size: 1.1rem; color: var(--muted); max-width: 500px;
+}
+
+/* ─── Layout ────────────────────────────────────────────────────────────── */
+.layout {
+  max-width: 1280px; margin: 0 auto;
+  padding: 0 40px 80px;
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 32px;
+  position: relative; z-index: 1;
+  align-items: start;
+}
+
+/* ─── Form panel ────────────────────────────────────────────────────────── */
+.form-panel {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 32px;
+  box-shadow: var(--sh);
+  position: sticky; top: 90px;
+}
+.panel-title {
+  font-family: var(--ff-head);
+  font-size: 1.1rem; font-weight: 700;
+  margin-bottom: 28px;
+  display: flex; align-items: center; gap: 10px;
+}
+.panel-title .icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--accent); display:flex; align-items:center; justify-content:center;
+  font-size: 1rem;
+}
+
+.form-group { margin-bottom: 20px; }
+label {
+  display: block;
+  font-size: .78rem; font-weight: 500; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--muted);
+  margin-bottom: 7px;
+  font-family: var(--ff-mono);
+}
+input[type=text], select {
+  width: 100%;
+  padding: 11px 15px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  font-family: var(--ff-body); font-size: .95rem;
+  background: var(--paper);
+  color: var(--ink);
+  transition: border-color var(--tr), box-shadow var(--tr);
+  -webkit-appearance: none;
+}
+input[type=text]:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(232,82,26,.12);
+}
+select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a7672' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+
+.skills-input-wrapper { position: relative; }
+.skills-tags {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 10px; min-height: 32px;
+}
+.skill-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--ink); color: var(--paper);
+  font-family: var(--ff-mono); font-size: .72rem;
+  padding: 4px 10px; border-radius: 6px;
+  animation: tagIn .2s ease;
+  cursor: default;
+}
+@keyframes tagIn { from{opacity:0;transform:scale(.8)} to{opacity:1;transform:scale(1)} }
+.skill-tag button {
+  background: none; border: none; cursor: pointer; color: rgba(244,241,235,.5);
+  font-size: 1rem; line-height: 1; padding: 0 0 0 2px;
+  transition: color .15s;
+}
+.skill-tag button:hover { color: var(--paper); }
+
+.skill-suggest {
+  display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px;
+}
+.skill-chip {
+  font-family: var(--ff-mono); font-size: .7rem;
+  background: var(--tag-bg); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 3px 9px; cursor: pointer;
+  transition: all .15s;
+}
+.skill-chip:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.radio-group { display: flex; gap: 8px; }
+.radio-group label {
+  flex: 1; text-transform: none; letter-spacing: 0; font-size: .85rem;
+  font-family: var(--ff-body);
+  background: var(--paper); border: 1.5px solid var(--border);
+  border-radius: var(--r); padding: 9px 12px; text-align: center;
+  cursor: pointer; transition: all .2s; user-select: none; color: var(--ink);
+}
+.radio-group input { display: none; }
+.radio-group input:checked + label {
+  background: var(--ink); color: var(--paper); border-color: var(--ink);
+}
+
+.btn-submit {
+  width: 100%; padding: 15px;
+  background: var(--accent); color: #fff; border: none;
+  border-radius: var(--r); font-family: var(--ff-head);
+  font-size: 1rem; font-weight: 700; cursor: pointer;
+  margin-top: 8px; letter-spacing: -.01em;
+  transition: all var(--tr); position: relative; overflow: hidden;
+}
+.btn-submit::after {
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+  transform: translateX(-100%); transition: transform .5s;
+}
+.btn-submit:hover { background: #c4401a; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(232,82,26,.35); }
+.btn-submit:hover::after { transform: translateX(100%); }
+.btn-submit:active { transform: translateY(0); }
+.btn-submit:disabled { background: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ─── Results panel ─────────────────────────────────────────────────────── */
+.results-panel { min-height: 400px; }
+
+.results-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.results-title {
+  font-family: var(--ff-head);
+  font-size: 1.3rem; font-weight: 700;
+}
+.model-badge {
+  font-family: var(--ff-mono); font-size: .68rem; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted);
+  border: 1px solid var(--border); padding: 4px 10px; border-radius: 999px;
+}
+
+/* ─── Empty state ───────────────────────────────────────────────────────── */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 80px 20px; text-align: center;
+  border: 2px dashed var(--border); border-radius: var(--r-lg);
+  color: var(--muted);
+}
+.empty-icon { font-size: 3rem; margin-bottom: 16px; opacity: .4; }
+.empty-state p { font-size: .95rem; }
+
+/* ─── Cards ─────────────────────────────────────────────────────────────── */
+.cards-grid { display: flex; flex-direction: column; gap: 16px; }
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 24px 28px;
+  box-shadow: var(--sh);
+  transition: all var(--tr);
+  position: relative; overflow: hidden;
+  animation: cardIn .4s ease both;
+}
+.card:nth-child(1){animation-delay:.05s}
+.card:nth-child(2){animation-delay:.10s}
+.card:nth-child(3){animation-delay:.15s}
+.card:nth-child(4){animation-delay:.20s}
+.card:nth-child(5){animation-delay:.25s}
+
+@keyframes cardIn {
+  from { opacity:0; transform:translateY(16px) }
+  to   { opacity:1; transform:translateY(0) }
+}
+.card:hover {
+  box-shadow: var(--sh-hover);
+  border-color: rgba(232,82,26,.3);
+  transform: translateY(-2px);
+}
+
+/* Rank badge */
+.card-rank {
+  position: absolute; top: 0; left: 0;
+  width: 40px; height: 40px;
+  background: var(--ink); color: var(--paper);
+  font-family: var(--ff-head); font-size: .85rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--r-lg) 0 var(--r) 0;
+}
+.card-rank.top1 { background: var(--accent); }
+.card-rank.top2 { background: var(--accent2); color: var(--ink); }
+
+.card-body { padding-left: 10px; }
+.card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.card-title {
+  font-family: var(--ff-head);
+  font-size: 1.15rem; font-weight: 700; letter-spacing: -.01em;
+  max-width: 60%;
+}
+.card-score {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+}
+.score-value {
+  font-family: var(--ff-head); font-size: 1.9rem; font-weight: 800;
+  line-height: 1; letter-spacing: -.03em;
+  color: var(--accent);
+}
+.score-label {
+  font-family: var(--ff-mono); font-size: .65rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.card-meta {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;
+}
+.meta-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--tag-bg); border: 1px solid var(--border);
+  font-size: .78rem; font-family: var(--ff-mono);
+  padding: 4px 10px; border-radius: 6px; color: var(--ink);
+}
+.meta-pill .dot { width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0; }
+
+/* Score bar */
+.score-bar-wrap { margin-bottom: 14px; }
+.score-bar-track {
+  height: 5px; background: var(--tag-bg);
+  border-radius: 999px; overflow: hidden;
+}
+.score-bar-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  transition: width 1s cubic-bezier(.4,0,.2,1);
+  width: 0;
+}
+
+/* Skills */
+.skills-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.req-skill {
+  font-family: var(--ff-mono); font-size: .7rem;
+  border-radius: 5px; padding: 3px 8px;
+  border: 1px solid var(--border);
+}
+.req-skill.matched { background: #e8f5ef; color: var(--success); border-color:#b6d9c7; }
+.req-skill.unmatched { background: var(--tag-bg); color: var(--muted); }
+
+/* Why recommended */
+.why-toggle {
+  background: none; border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 14px;
+  font-family: var(--ff-mono); font-size: .72rem; letter-spacing: .04em;
+  color: var(--muted); cursor: pointer; transition: all .2s;
+  display: flex; align-items: center; gap: 6px;
+}
+.why-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.why-toggle .arrow { transition: transform .2s; }
+.why-toggle.open .arrow { transform: rotate(180deg); }
+
+.why-panel {
+  display: none; margin-top: 14px;
+  background: var(--paper); border-radius: var(--r);
+  padding: 14px 16px; border: 1px solid var(--border);
+}
+.why-panel.show { display: block; animation: fadeIn .2s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+
+.why-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 8px; font-size: .82rem;
+}
+.why-row:last-child { margin-bottom: 0; }
+.why-bar-wrap { flex: 1; height: 6px; background: var(--border); border-radius:999px; overflow:hidden; }
+.why-bar { height:100%; border-radius:999px; background: var(--accent); }
+.why-label { font-family: var(--ff-mono); font-size:.68rem; color:var(--muted); min-width:120px; }
+.why-val { font-family: var(--ff-mono); font-size:.68rem; color:var(--ink); min-width:38px; text-align:right; }
+
+.card-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);
+}
+.stipend {
+  font-family: var(--ff-head); font-size: 1rem; font-weight: 700;
+}
+.btn-apply {
+  padding: 9px 22px; border-radius: 8px;
+  background: var(--ink); color: var(--paper); border: none;
+  font-family: var(--ff-head); font-size: .85rem; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+}
+.btn-apply:hover { background: var(--accent); transform: translateY(-1px); }
+.btn-apply:disabled { background: var(--muted); cursor: default; transform: none; }
+.btn-apply.applied { background: var(--success); }
+
+/* ─── Loading ───────────────────────────────────────────────────────────── */
+.loading {
+  display: none; flex-direction: column; align-items: center;
+  justify-content: center; padding: 80px; gap: 20px;
+}
+.loading.show { display: flex; }
+.spinner {
+  width: 44px; height: 44px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text {
+  font-family: var(--ff-mono); font-size: .78rem; letter-spacing:.1em;
+  text-transform: uppercase; color: var(--muted);
+  animation: blink 1.4s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ─── Stats bar ─────────────────────────────────────────────────────────── */
+.stats-bar {
+  display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;
+}
+.stat-chip {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 10px 16px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.stat-val {
+  font-family: var(--ff-head); font-size: 1.2rem; font-weight: 800;
+}
+.stat-lbl {
+  font-family: var(--ff-mono); font-size: .65rem; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+/* ─── Toast ─────────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 28px; right: 28px;
+  background: var(--ink); color: var(--paper);
+  font-family: var(--ff-body); font-size: .9rem;
+  padding: 14px 22px; border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  transform: translateY(80px); opacity: 0;
+  transition: all .35s cubic-bezier(.4,0,.2,1);
+  z-index: 1000; max-width: 320px;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-left: 4px solid var(--success); }
+.toast.error   { border-left: 4px solid var(--accent); }
+
+/* ─── Responsive ────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  header { padding: 20px 24px; }
+  .hero  { padding: 48px 24px 40px; }
+  .layout { grid-template-columns: 1fr; padding: 0 24px 60px; gap: 24px; }
+  .form-panel { position: static; }
+}
+@media (max-width: 600px) {
+  h1 { font-size: 2rem; }
+  .card { padding: 18px 20px; }
+  .card-title { max-width: 55%; font-size: 1rem; }
+  .score-value { font-size: 1.5rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <span class="logo-dot"></span>
+    InternIQ
+  </div>
+  <span class="header-badge">ML Powered</span>
+</header>
+
+<!-- ── Hero ────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-eyebrow">AI Internship Recommendation Engine</div>
+  <h1>Find internships that<br /><em>actually fit</em> your profile.</h1>
+  <p class="hero-sub">Our Logistic Regression model scores every available position against your skills, sector, and location — then ranks the best matches for you.</p>
+</section>
+
+<!-- ── Main layout ──────────────────────────────────────────────────────── -->
+<main class="layout">
+
+  <!-- ── Form ─────────────────────────────────────────────────────────── -->
+  <aside class="form-panel">
+    <div class="panel-title">
+      <div class="icon">👤</div>
+      Your Profile
+    </div>
+
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="name" placeholder="e.g. Priya Sharma" />
+    </div>
+
+    <div class="form-group">
+      <label>Education</label>
+      <select id="education">
+        <option value="High School">High School</option>
+        <option value="Diploma">Diploma</option>
+        <option value="Bachelor's" selected>Bachelor's</option>
+        <option value="Master's">Master's</option>
+        <option value="PhD">PhD</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Sector Interest</label>
+      <select id="sector_interest">
+        <option value="tech">Technology</option>
+        <option value="finance">Finance</option>
+        <option value="health">Healthcare</option>
+        <option value="media">Media & Design</option>
+        <option value="govt">Government</option>
+        <option value="legal">Legal</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Location</label>
+      <select id="location">
+        <option>Delhi</option><option>Mumbai</option><option>Bangalore</option>
+        <option>Chennai</option><option>Kolkata</option><option>Hyderabad</option>
+        <option>Pune</option><option>Jaipur</option><option>Lucknow</option>
+        <option>Bhopal</option><option>Remote</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Category</label>
+      <select id="category">
+        <option>General</option><option>OBC</option>
+        <option>SC</option><option>ST</option><option>EWS</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>District Type</label>
+      <div class="radio-group">
+        <input type="radio" name="district" id="d_urban" value="Urban" checked />
+        <label for="d_urban">Urban</label>
+        <input type="radio" name="district" id="d_semi" value="Semi-Urban" />
+        <label for="d_semi">Semi-Urban</label>
+        <input type="radio" name="district" id="d_rural" value="Rural" />
+        <label for="d_rural">Rural</label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Prior Internship?</label>
+      <div class="radio-group">
+        <input type="radio" name="prev" id="prev_yes" value="1" />
+        <label for="prev_yes">Yes</label>
+        <input type="radio" name="prev" id="prev_no" value="0" checked />
+        <label for="prev_no">No</label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Skills</label>
+      <div class="skills-input-wrapper">
+        <input type="text" id="skill-input" placeholder="Type a skill and press Enter…" />
+      </div>
+      <div class="skills-tags" id="skills-display"></div>
+      <div class="skill-suggest" id="skill-suggest"></div>
+    </div>
+
+    <button class="btn-submit" id="btn-submit" onclick="submitForm()">
+      Find My Matches →
+    </button>
+  </aside>
+
+  <!-- ── Results ──────────────────────────────────────────────────────── -->
+  <section class="results-panel">
+    <div class="results-header">
+      <div class="results-title" id="results-title">Recommendations</div>
+      <div class="model-badge" id="model-badge">Logistic Regression</div>
+    </div>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <div class="loading-text">Running ML model…</div>
+    </div>
+
+    <div id="stats-bar" class="stats-bar" style="display:none"></div>
+
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">🎯</div>
+      <p>Fill in your profile and click <strong>Find My Matches</strong><br />to see AI-ranked internship recommendations.</p>
+    </div>
+
+    <div class="cards-grid" id="cards-grid"></div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ─── Config ─────────────────────────────────────────────────────────── */
+const API = window.location.origin;  // same-origin when served by FastAPI
+
+/* ─── Skill pool by sector ───────────────────────────────────────────── */
+const SKILL_MAP = {
+  tech:    ["Python","Machine Learning","Data Analysis","Web Dev","SQL","Cloud","Cybersecurity","IoT","Android Dev","UI/UX"],
+  finance: ["Accounting","Financial Modeling","Excel","Taxation","Risk Analysis","Audit","Equity Research","Tally"],
+  health:  ["First Aid","Patient Care","Medical Research","Pharmacology","Lab Skills","Public Health","Nutrition"],
+  media:   ["Content Writing","Video Editing","Graphic Design","Social Media","Photography","SEO","Copywriting"],
+  govt:    ["Policy Analysis","Report Writing","Documentation","GIS Mapping","Survey Methods","Community Outreach"],
+  legal:   ["Legal Research","Contract Drafting","Case Analysis","Compliance","IP Law","Labour Law"],
+};
+
+let userSkills = [];
+
+function updateSuggestions(){
+  const sector = document.getElementById('sector_interest').value;
+  const pool   = SKILL_MAP[sector] || [];
+  const wrap   = document.getElementById('skill-suggest');
+  wrap.innerHTML = '';
+  pool.filter(s => !userSkills.includes(s)).slice(0,8).forEach(s => {
+    const chip = document.createElement('span');
+    chip.className='skill-chip'; chip.textContent=s;
+    chip.onclick = () => addSkill(s);
+    wrap.appendChild(chip);
+  });
+}
+
+function addSkill(s){
+  s = s.trim();
+  if(!s || userSkills.includes(s)) return;
+  userSkills.push(s);
+  renderSkills(); updateSuggestions();
+}
+
+function removeSkill(s){
+  userSkills = userSkills.filter(x=>x!==s);
+  renderSkills(); updateSuggestions();
+}
+
+function renderSkills(){
+  const el = document.getElementById('skills-display');
+  el.innerHTML='';
+  userSkills.forEach(s=>{
+    const tag = document.createElement('span');
+    tag.className='skill-tag';
+    tag.innerHTML=`${s}<button onclick="removeSkill('${s.replace(/'/,"\\'")}')">×</button>`;
+    el.appendChild(tag);
+  });
+}
+
+document.getElementById('skill-input').addEventListener('keydown', e=>{
+  if(e.key==='Enter'||e.key===','){
+    e.preventDefault(); addSkill(e.target.value); e.target.value='';
+  }
+});
+document.getElementById('sector_interest').addEventListener('change', updateSuggestions);
+updateSuggestions();
+
+/* ─── Toast ──────────────────────────────────────────────────────────── */
+function toast(msg, type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`toast ${type} show`;
+  setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+/* ─── Submit ──────────────────────────────────────────────────────────── */
+async function submitForm(){
+  const btn = document.getElementById('btn-submit');
+  const payload = {
+    name:            document.getElementById('name').value || 'Anonymous',
+    education:       document.getElementById('education').value,
+    skills:          [...userSkills],
+    sector_interest: document.getElementById('sector_interest').value,
+    location:        document.getElementById('location').value,
+    category:        document.getElementById('category').value,
+    district_type:   document.querySelector('input[name=district]:checked').value,
+    prev_internship: parseInt(document.querySelector('input[name=prev]:checked').value),
+  };
+
+  // UI states
+  btn.disabled=true; btn.textContent='Analysing…';
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('empty-state').style.display='none';
+  document.getElementById('cards-grid').innerHTML='';
+  document.getElementById('stats-bar').style.display='none';
+
+  try {
+    const res  = await fetch(`${API}/recommend?top_n=5`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    if(!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    renderResults(data, payload);
+  } catch(err){
+    console.error(err);
+    toast('Could not reach API. Is the server running?','error');
+    document.getElementById('empty-state').style.display='flex';
+  } finally {
+    document.getElementById('loading').classList.remove('show');
+    btn.disabled=false; btn.textContent='Find My Matches →';
+  }
+}
+
+/* ─── Render results ──────────────────────────────────────────────────── */
+function renderResults(data, user){
+  const recs = data.recommendations;
+
+  // Stats bar
+  const statsEl = document.getElementById('stats-bar');
+  if(recs.length){
+    statsEl.style.display='flex';
+    statsEl.innerHTML=`
+      <div class="stat-chip"><div class="stat-val">${recs.length}</div><div class="stat-lbl">Matches Found</div></div>
+      <div class="stat-chip"><div class="stat-val">${recs[0].score_pct}%</div><div class="stat-lbl">Top Match Score</div></div>
+      <div class="stat-chip"><div class="stat-val">${data.total_available}</div><div class="stat-lbl">Positions Available</div></div>
+      <div class="stat-chip"><div class="stat-val">${(data.model_info.roc_auc*100).toFixed(0)}%</div><div class="stat-lbl">Model AUC</div></div>
+    `;
+  }
+
+  document.getElementById('results-title').textContent=
+    `Top matches for ${user.name}`;
+  document.getElementById('model-badge').textContent=
+    `${data.model_info.type} · acc ${(data.model_info.accuracy*100).toFixed(0)}%`;
+
+  const grid = document.getElementById('cards-grid');
+  grid.innerHTML='';
+  recs.forEach((r,i) => grid.appendChild(buildCard(r, i, user.skills)));
+  // Animate score bars
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('.score-bar-fill').forEach(el=>{
+      el.style.width = el.dataset.w;
+    });
+  });
+}
+
+function buildCard(r, i, userSkills){
+  const div = document.createElement('div');
+  div.className='card';
+
+  const rankClass = i===0?'top1': i===1?'top2':'';
+  const skillHTML = (r.required_skills||[]).map(s=>{
+    const matched = userSkills.map(u=>u.toLowerCase()).includes(s.toLowerCase());
+    return `<span class="req-skill ${matched?'matched':'unmatched'}">${s}</span>`;
+  }).join('');
+
+  const whyHTML = (r.explanation||[]).map(e=>{
+    const pct = Math.min(100, Math.round(e.contribution*400));
+    return `<div class="why-row">
+      <span class="why-label">${e.label}</span>
+      <div class="why-bar-wrap"><div class="why-bar" style="width:${pct}%"></div></div>
+      <span class="why-val">${(e.value*100).toFixed(0)}%</span>
+    </div>`;
+  }).join('');
+
+  div.innerHTML=`
+    <div class="card-rank ${rankClass}">#${i+1}</div>
+    <div class="card-body">
+      <div class="card-header">
+        <div class="card-title">${r.title}</div>
+        <div class="card-score">
+          <div class="score-value">${r.score_pct}%</div>
+          <div class="score-label">match score</div>
+        </div>
+      </div>
+      <div class="card-meta">
+        <span class="meta-pill"><span class="dot"></span>${r.sector}</span>
+        <span class="meta-pill">📍 ${r.location}</span>
+        <span class="meta-pill">⏱ ${r.duration_weeks}w</span>
+        <span class="meta-pill">🪑 ${r.capacity} seats</span>
+      </div>
+      <div class="score-bar-wrap">
+        <div class="score-bar-track">
+          <div class="score-bar-fill" data-w="${r.score_pct}%" style="width:0"></div>
+        </div>
+      </div>
+      <div class="skills-row">${skillHTML}</div>
+      <button class="why-toggle" onclick="toggleWhy(this)">
+        Why recommended <span class="arrow">▾</span>
+      </button>
+      <div class="why-panel">${whyHTML}</div>
+      <div class="card-footer">
+        <div class="stipend">₹${r.stipend.toLocaleString('en-IN')}<span style="font-size:.75rem;font-weight:400;color:var(--muted)">/mo</span></div>
+        <button class="btn-apply" onclick="applyTo(this,'${r.internship_id}','${r.score}')">
+          Apply Now
+        </button>
+      </div>
+    </div>`;
+  return div;
+}
+
+function toggleWhy(btn){
+  btn.classList.toggle('open');
+  btn.nextElementSibling.classList.toggle('show');
+}
+
+async function applyTo(btn, id, score){
+  const name = document.getElementById('name').value || 'Anonymous';
+  btn.disabled=true; btn.textContent='Applying…';
+  try {
+    const res = await fetch(`${API}/allocate`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({internship_id:id, user_name:name, score:parseFloat(score)}),
+    });
+    if(!res.ok) throw new Error();
+    btn.textContent='✓ Applied'; btn.classList.add('applied');
+    toast(`Applied to ${id} successfully!`,'success');
+  } catch {
+    btn.disabled=false; btn.textContent='Apply Now';
+    toast('Application failed. Try again.','error');
+  }
+}
+</script>
+</body>
+</html>
